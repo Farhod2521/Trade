@@ -1,0 +1,106 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XM Account Trading</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 80%;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align:center;">Trading Account Balances</h1>
+    
+    <!-- Chart Section -->
+    <canvas id="balanceChart"></canvas>
+
+    <!-- Table Section -->
+    <div id="tradeTable"></div>
+
+    <script>
+        const ctx = document.getElementById("balanceChart").getContext("2d");
+        
+        const colors = ["red", "blue", "green", "orange", "purple"];
+
+        let chart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: []
+            }
+        });
+
+        // Chart yangilanishi
+        async function updateChart() {
+            const response = await fetch("/balances");
+            const data = await response.json();
+
+            const time = new Date().toLocaleTimeString();
+            if (chart.data.labels.length > 20) chart.data.labels.shift();
+            chart.data.labels.push(time);
+
+            Object.keys(data).forEach((account, index) => {
+                let balance = data[account];
+
+                if (!chart.data.datasets[index]) {
+                    chart.data.datasets.push({
+                        label: `Account ${account}`,
+                        data: [],
+                        borderColor: colors[index],
+                        fill: false
+                    });
+                }
+
+                if (chart.data.datasets[index].data.length > 20) chart.data.datasets[index].data.shift();
+                chart.data.datasets[index].data.push(balance);
+            });
+
+            chart.update();
+        }
+
+        // Savdo jadvalini yangilash
+        async function updateTradeTable(accountId) {
+            const response = await fetch("/open_trades");
+            const data = await response.json();
+            const trades = data[accountId];
+
+            let tableHtml = "<table><tr><th>Symbol</th><th>Lot Size</th><th>Price</th><th>Type</th></tr>";
+            trades.forEach(trade => {
+                tableHtml += `<tr><td>${trade.symbol}</td><td>${trade.lot_size}</td><td>${trade.price}</td><td>${trade.trade_type}</td></tr>`;
+            });
+            tableHtml += "</table>";
+
+            document.getElementById("tradeTable").innerHTML = tableHtml;
+        }
+
+        // Grafikni yangilash
+        setInterval(updateChart, 5000);
+
+        // Accountga bossa, savdo jadvalini ko'rsatish
+        document.getElementById("balanceChart").addEventListener("click", function(event) {
+            const clickedAccount = "12345678";  // Misol uchun account ID
+            updateTradeTable(clickedAccount);
+        });
+    </script>
+</body>
+</html>
